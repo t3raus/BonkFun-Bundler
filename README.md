@@ -28,7 +28,7 @@ Telegram: https://t.me/benorizz0
 - [Performance Optimization](#performance-optimization)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
-- [Support](#support)
+- [Community](#community)
 
 ## Overview
 
@@ -637,10 +637,6 @@ We welcome contributions to the bonkfun bundler project!
 
 
 
-## Support
-
-### Documentation
-- Full documentation: [docs.solana-scripts.com](https://docs.solana-scripts.com)
 
 ### Community
 - Discord: [discord.gg/solana-scripts](https://discord.gg/solana-scripts)
