@@ -4,7 +4,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 [![Solana](https://img.shields.io/badge/Solana-Web3.js-purple.svg)](https://www.npmjs.com/package/@solana/web3.js)
 
-The **Bonkfun Bundler** is a professional, automated token bundling solution specifically designed for [letsbonk.fun](https://letsbonk.fun/) - the new hype of Solana. This comprehensive tool allows you to deploy a token on bonk in 3 different modes, and sell with up to 6 modes.
+The **Bonkfun Bundler** is a professional, automated token bundling solution specifically designed for [letsbonk.fun](https://letsbonk.fun/) - the new meta of Solana launches. This comprehensive tool allows you to deploy a token on bonk in 3 different modes, and sell with up to 6 modes.
 
 Discord: https://discord.gg/solana-scripts
 
