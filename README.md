@@ -6,7 +6,7 @@
 
 The **Bonkfun Bundler** is a professional, automated token bundling solution specifically designed for [letsbonk.fun](https://letsbonk.fun/) - the new hype of Solana. This comprehensive tool allows you to deploy a token on bonk in 3 different modes, and sell with up to 6 modes.
 
-Discord: https://discord.gg/solana-scripts.com
+Discord: https://discord.gg/solana-scripts
 
 Telegram: https://t.me/benorizz0
 
