@@ -11,7 +11,6 @@ The **Bonkfun Bundler** is a professional, automated token bundling solution spe
 
 - [Overview](#overview)
 - [Key Features](#key-features)
-- [Architecture](#architecture)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage Guide](#usage-guide)
@@ -25,7 +24,6 @@ The **Bonkfun Bundler** is a professional, automated token bundling solution spe
 - [Performance Optimization](#performance-optimization)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
-- [License](#license)
 - [Support](#support)
 
 ## Overview
