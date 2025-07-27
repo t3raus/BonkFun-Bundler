@@ -1,4 +1,4 @@
-const { Connection, Keypair, PublicKey, Transaction, SystemProgram, TransactionMessage, VersionedTransaction } = require('@solana/web3.js');
+const { Connection, Keypair, PublicKey, Transaction, SystemProgram, TransactionMessage, VersionedTransaction, TransactionInstruction } = require('@solana/web3.js');
 const { createAssociatedTokenAccountInstruction, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } = require('@solana/spl-token');
 const chalk = require('chalk');
 const prompt = require('prompt-sync')();
@@ -6,6 +6,8 @@ const bs58 = require('bs58');
 const crypto = require('crypto');
 const axios = require('axios');
 const fs = require('fs');
+const BN = require('bn.js');
+const FormData = require('form-data');
 
 const CONFIG = {
     RPC_ENDPOINT: process.env.RPC_ENDPOINT || "https://solana-mainnet.g.alchemy.com/v2/",
@@ -404,4 +406,208 @@ class BonkfunBundler {
         );
         return pda;
     }
-} 
+
+    async buildBuyInstruction(keypair, mint, amount, poolInfo) {
+        const data = Buffer.concat([
+            Buffer.from([66, 0, 225, 24, 214, 117, 224, 36]),
+            new BN(amount * 1e9).toBuffer('le', 8),
+            new BN(0).toBuffer('le', 8)
+        ]);
+
+        const tokenAccount = await getAssociatedTokenAddress(mint, keypair.publicKey);
+        
+        const keys = [
+            { pubkey: keypair.publicKey, isSigner: true, isWritable: true },
+            { pubkey: mint, isSigner: false, isWritable: false },
+            { pubkey: poolInfo.address, isSigner: false, isWritable: true },
+            { pubkey: tokenAccount, isSigner: false, isWritable: true },
+            { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+            { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        ];
+
+        return new TransactionInstruction({
+            programId: PROGRAMS.BONKFUN,
+            keys,
+            data
+        });
+    }
+
+    async sendJitoBundle(transactions, signers) {
+        const endpoint = "https://mainnet.block-engine.jito.wtf/api/v1/bundles";
+        const tipAmount = CONFIG.JITO_TIP * 1e9;
+        
+        const { blockhash } = await this.connection.getLatestBlockhash();
+        const bundleTxs = [];
+
+        for (let i = 0; i < transactions.length; i++) {
+            const message = new TransactionMessage({
+                payerKey: signers[i].publicKey,
+                recentBlockhash: blockhash,
+                instructions: transactions[i].instructions
+            }).compileToV0Message(this.lookupTables);
+
+            const tx = new VersionedTransaction(message);
+            tx.sign([signers[i]]);
+            bundleTxs.push(tx);
+        }
+
+        const tipAccount = PROGRAMS.JITO_TIP[Math.floor(Math.random() * PROGRAMS.JITO_TIP.length)];
+        const tipIx = SystemProgram.transfer({
+            fromPubkey: this.mainWallet.publicKey,
+            toPubkey: new PublicKey(tipAccount),
+            lamports: tipAmount
+        });
+
+        const tipMessage = new TransactionMessage({
+            payerKey: this.mainWallet.publicKey,
+            recentBlockhash: blockhash,
+            instructions: [tipIx]
+        }).compileToV0Message();
+
+        const tipTx = new VersionedTransaction(tipMessage);
+        tipTx.sign([this.mainWallet]);
+        bundleTxs.push(tipTx);
+
+        const serializedTxs = bundleTxs.map(tx => bs58.encode(tx.serialize()));
+
+        const response = await axios.post(endpoint, {
+            jsonrpc: "2.0",
+            id: 1,
+            method: "sendBundle",
+            params: [serializedTxs]
+        });
+
+        return response.data;
+    }
+
+    async uploadMetadata(metadata) {
+        const formData = new FormData();
+        formData.append('file', metadata.file);
+        formData.append('name', metadata.tokenName);
+        formData.append('symbol', metadata.tokenSymbol);
+        formData.append('description', metadata.description);
+
+        const response = await axios.post('https://ipfs.infura.io:5001/api/v0/add', formData, {
+            headers: {
+                'Authorization': `Basic ${Buffer.from(process.env.INFURA_PROJECT_ID + ':' + process.env.INFURA_PROJECT_SECRET).toString('base64')}`
+            }
+        });
+
+        return `https://ipfs.io/ipfs/${response.data.Hash}`;
+    }
+
+    async getPoolInfo(mint) {
+        const [poolPda] = PublicKey.findProgramAddressSync(
+            [Buffer.from("pool"), mint.toBuffer()],
+            PROGRAMS.BONKFUN
+        );
+
+        const accountInfo = await this.connection.getAccountInfo(poolPda);
+        if (!accountInfo) throw new Error("Pool not found");
+
+        const data = accountInfo.data;
+        return {
+            address: poolPda,
+            virtualSolReserves: new BN(data.slice(8, 16), 'le'),
+            virtualTokenReserves: new BN(data.slice(16, 24), 'le'),
+            realSolReserves: new BN(data.slice(24, 32), 'le'),
+            realTokenReserves: new BN(data.slice(32, 40), 'le')
+        };
+    }
+}
+
+async function main() {
+    console.clear();
+    console.log(chalk.green(`
+    ╔══════════════════════════════════════════╗
+    ║         LetsBonk.fun Bundler v2.0        ║
+    ╚══════════════════════════════════════════╝
+    `));
+
+    const bundler = new BonkfunBundler();
+    
+    const menuOptions = [
+        '1. Launch Token',
+        '2. Create Wallets', 
+        '3. Distribute SOL',
+        '4. Buy Tokens',
+        '5. Sell Tokens',
+        '6. Individual Wallet Sell',
+        '7. Dev Dump',
+        '8. Delayed Sell',
+        '9. Retrieve SOL',
+        '10. Export/Import Wallets',
+        '11. Exit'
+    ];
+
+    while (true) {
+        console.log(chalk.cyan('\nMain Menu:'));
+        menuOptions.forEach(option => console.log(chalk.white(option)));
+        
+        const choice = prompt(chalk.yellow('\nSelect option: '));
+
+        try {
+            switch(choice) {
+                case '1':
+                    const tokenName = prompt('Token Name: ');
+                    const tokenSymbol = prompt('Token Symbol: ');
+                    const description = prompt('Description: ');
+                    const file = prompt('Image path: ');
+                    
+                    const { tx, mintKeypair } = await bundler.launchToken({
+                        tokenName,
+                        tokenSymbol,
+                        description,
+                        file,
+                        twitter: prompt('Twitter (optional): '),
+                        telegram: prompt('Telegram (optional): '),
+                        website: prompt('Website (optional): ')
+                    });
+                    
+                    console.log(chalk.green(`Token launched! Mint: ${mintKeypair.publicKey.toString()}`));
+                    break;
+
+                case '2':
+                    const count = parseInt(prompt('Number of wallets: '));
+                    const useMnemonic = prompt('Use mnemonic? (y/n): ').toLowerCase() === 'y';
+                    await bundler.createWallets(count, useMnemonic);
+                    break;
+
+                case '3':
+                    const amount = parseFloat(prompt('Total SOL to distribute: '));
+                    const sig = await bundler.distributeSol(amount);
+                    console.log(chalk.green(`Distribution complete: ${sig}`));
+                    break;
+
+                case '4':
+                    const mintAddress = prompt('Token mint address: ');
+                    const perWallet = parseFloat(prompt('SOL per wallet: '));
+                    const mode = parseInt(prompt('Mode (1=Bundle, 2=Sequential): '));
+                    await bundler.executeSwaps(mintAddress, perWallet, mode);
+                    break;
+
+                case '5':
+                    const { TradingEngine } = require('./tradingEngine');
+                    const engine = new TradingEngine(bundler.connection, bundler);
+                    const sellMint = prompt('Token mint: ');
+                    const percentage = parseInt(prompt('Sell percentage (1-100): '));
+                    await engine.sellAll(bundler.wallets, new PublicKey(sellMint), percentage);
+                    break;
+
+                case '11':
+                    process.exit(0);
+
+                default:
+                    console.log(chalk.red('Invalid option'));
+            }
+        } catch (error) {
+            console.error(chalk.red(`Error: ${error.message}`));
+        }
+    }
+}
+
+if (require.main === module) {
+    main().catch(console.error);
+}
+
+module.exports = { BonkfunBundler }; 
