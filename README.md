@@ -1,9 +1,8 @@
 # Bonkfun Bundler - Advanced Token Bundler for letsbonk.fun
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen.svg)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
-[![Solana](https://img.shields.io/badge/Solana-Web3.js-purple.svg)](https://solana-labs.github.io/solana-web3.js/)
+[![Solana](https://img.shields.io/badge/Solana-Web3.js-purple.svg)](https://www.npmjs.com/package/@solana/web3.js)
 
 The **Bonkfun Bundler** is a professional, automated token bundling solution specifically designed for [letsbonk.fun](https://letsbonk.fun/) - the new hype of Solana. This comprehensive tool allows you to deploy a token on bonk in 3 different modes, and sell with up to 6 modes.
 
